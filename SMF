@@ -1,1 +1,25 @@
+rm(list=ls())
+setwd("E:\\AAM\\health")
+#????R??
+library(tidyverse)
+#??ȡ????
+data <- read.csv("emf-factor.csv",header = T)
+
+#?Ƚ??й?һ??????
+mydata <- scale(data)
+head(mydata)
+#Z?????ļ???
+Zcore <- (mydata-mean(mydata))/sd(mydata)
+head(Zcore)
+#????Zcore
+write.csv(Zcore,"multfunction_Zcore_N.csv")
+#????EMF
+Zcore <- as.data.frame(Zcore)
+
+var <- c( "EC","SOC","TN","TP","DOC","NH4","Olsen.P","MBN","MBP","CBH","NAG","LAP",'Phos','Na','TMg','TCa','TNa','TK')
+Zcore$emf <- apply(select(Zcore,var),1,mean)
+head(Zcore)
+#????EMF
+write.csv(Zcore,"EMF_multfunction.csv")
+#????????ͼ
 
