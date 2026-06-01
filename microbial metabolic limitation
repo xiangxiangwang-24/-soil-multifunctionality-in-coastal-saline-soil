@@ -1,1 +1,111 @@
+rm(list = ls())
+setwd("E:\\AAM\\health")
 
+library(randomForest)
+library(rfPermute)
+library(ggplot2)
+#构建函数，这一步不需要改动
+create_rfplot <- function(rf, type){
+  
+  imp <- importance(rf, type = type, scale = F)
+  
+  featureImportance <- data.frame(Feature = row.names(imp), Importance = imp[,1])
+  
+  p <- ggplot(featureImportance, aes(x = reorder(Feature, Importance), y = Importance)) +
+    geom_bar(stat = "identity", fill = "#53cfff", width = 0.65) +
+    coord_flip() + 
+    theme_light(base_size = 20) +
+    theme(axis.title.x = element_text(size = 15, color = "black"),
+          axis.title.y = element_blank(),
+          axis.text.x  = element_text(size = 15, color = "black"),
+          axis.text.y  = element_text(size = 15, color = "black")) 
+  return(p)
+}
+#设置随机种子
+set.seed(123)
+#读取数据
+mydata<-read.csv("RF-A.csv")
+#mydata<-mydata[,2:23]
+#设置随机种子，使结果能够重现
+
+rf_results<-rfPermute(mydata$SQI~., data =mydata, importance = TRUE, ntree = 800)
+rf_results
+
+#模型解释度
+rf1 <- randomForest(mydata$SQI~.,  ntree = 800, nrep = 1000, data = mydata,
+                    importance = TRUE)
+rf1
+#查看随机森林结果
+rf1$importance
+
+#进行随机森林运算
+#使用函数 rfPermut() 重新对上述数据执行随机森林分析，详情 ?rfPermut
+#rfPermut() 封装了 randomForest() 的方法，因此在给定数据和运行参数一致的情况下，两个函数结果也是一致的
+#并在这里额外通过 nrep 参数执行 1000 次的随机置换以评估变量显著性的 p 值
+#若数据量较大，可通过 num.cores 参数设置多线程运算
+rf1 <- rfPermute(mydata$SQI~., ntree = 800, nrep = 1000, num.cores = 1,
+                 data = mydata, importance = TRUE)
+
+#保存随机森林结果
+write.csv(rf1$importance,"RF_natural_cue.csv")
+#绘图
+create_rfplot(rf1, type = 2)
+
+#提取重要性得分（标准化后）
+importance_otu.scale <- data.frame(importance(rf1, scale = TRUE), check.names = FALSE)
+importance_otu.scale
+## 输出重要性排序结果到本地
+write.csv(importance_otu.scale,"importance.csv",quote = FALSE)
+
+
+#对预测变量（细菌 OTU）按重要性得分排个序(标准化后)，例如根据“%IncMSE”
+importance_otu.scale <- importance_otu.scale[order(importance_otu.scale$'%IncMSE', decreasing = TRUE), ]
+importance_otu.scale
+#标准化后重要性得分的显著性
+importance_otu.scale.pval <- (rf1$pval)[ , , 2]
+importance_otu.scale.pval
+##提取重要性top10变量绘制条形图
+## top10
+importance_otu.scale = importance_otu.scale[1:18,]
+importance_otu.scale
+
+#简单地作图展示预测变量（细菌 OTU）的 %IncMSE 值
+library(ggplot2)
+
+importance_otu.scale$OTU_name <- rownames(importance_otu.scale)
+importance_otu.scale$OTU_name <- factor(importance_otu.scale$OTU_name, levels = importance_otu.scale$OTU_name)
+#横图
+custom_palette <- colorRampPalette(c("#f0eedf","#0056aa"))(5)
+
+p <- ggplot() +
+  geom_col(data = importance_otu.scale, aes(x = OTU_name, y = `%IncMSE`, fill = `%IncMSE`), width = 0.5) +
+  scale_fill_gradientn(colors = custom_palette) +
+  labs(title = NULL, x = NULL, y = 'Increase in MSE (%)', fill = NULL) +
+  theme(panel.grid = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = 'black')) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), axis.text.y = element_text(angle = 90, hjust = 1)) +
+  scale_y_continuous(expand = c(0, 0), limit = c(-1, 30))
+p
+
+
+#标记显著性***
+for (OTU in rownames(importance_otu.scale)) {
+  importance_otu.scale[OTU,'%IncMSE.pval'] <- importance_otu.scale.pval[OTU,'%IncMSE']
+  if (importance_otu.scale[OTU,'%IncMSE.pval'] >= 0.05) importance_otu.scale[OTU,'%IncMSE.sig'] <- ''
+  else if (importance_otu.scale[OTU,'%IncMSE.pval'] >= 0.01 & importance_otu.scale[OTU,'%IncMSE.pval'] < 0.05) importance_otu.scale[OTU,'%IncMSE.sig'] <- '*'
+  else if (importance_otu.scale[OTU,'%IncMSE.pval'] >= 0.001 & importance_otu.scale[OTU,'%IncMSE.pval'] < 0.01) importance_otu.scale[OTU,'%IncMSE.sig'] <- '**'
+  else if (importance_otu.scale[OTU,'%IncMSE.pval'] < 0.001) importance_otu.scale[OTU,'%IncMSE.sig'] <- '***'
+}
+#出图横
+p <- p +
+  geom_text(data = importance_otu.scale, aes(x = OTU_name, y = `%IncMSE`, label = `%IncMSE.sig`), nudge_y = 1)
+p
+#标模型解释率
+p1 <- p +
+  annotate('text', label = 'Var explained', x = 6, y = 10, size = 4) +
+  annotate('text', label = sprintf('italic(R^2) == %.2f', 91.6), x = 13, y = 20, size = 3, parse = TRUE)
+p1
+
+library(ggpubr)
+p5 = ggarrange(p1,p2,p3,p4,nrow=2,ncol=2, common.legend = T,legend = "top",widths = c(1,1,1,1))
+p5
+ggsave('RF_agrcultural.pdf', p1, width = 10, height = 5)
