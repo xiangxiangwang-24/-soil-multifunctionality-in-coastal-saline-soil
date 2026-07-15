@@ -9,7 +9,7 @@ library(openxlsx)
 library(agricolae)
 
 
-df <- read.csv('raw data.csv',header = T,stringsAsFactors = FALSE, encoding='UTF-8')
+df <- read.csv('Supplementary raw data.csv',header = T,stringsAsFactors = FALSE, encoding='UTF-8')
 head(df)
 df$type = as.factor(df$type)
 df$type <- factor(df$type, levels = c('wasteland', 'woodland','upland','paddy'))
@@ -38,9 +38,15 @@ plot_bar <- function(df, yvar, ylab){
   fit.low <- aov(as.formula(paste(yvar,"~type")),data=low)
   tukey.low <- HSD.test(fit.low,"type",group=TRUE)
   letter.low <- data.frame(
-    type=rownames(tukey.low$groups),
-    letter=tukey.low$groups$groups
+    type = rownames(tukey.low$groups),
+    letter = tukey.low$groups$groups,
+    stringsAsFactors = FALSE
   )
+  letter.low$type <- factor(
+    letter.low$type,
+    levels = c("wasteland","woodland","upland","paddy")
+  )
+  letter.low <- letter.low[order(letter.low$type), ]
   letter.low$group <- "low"
   ##-----------------------------
   ## high组 Tukey
@@ -49,13 +55,23 @@ plot_bar <- function(df, yvar, ylab){
   fit.high <- aov(as.formula(paste(yvar,"~type")),data=high)
   tukey.high <- HSD.test(fit.high,"type",group=TRUE)
   letter.high <- data.frame(
-    type=rownames(tukey.high$groups),
-    letter=tukey.high$groups$groups
+    type = rownames(tukey.high$groups),
+    letter = tukey.high$groups$groups,
+    stringsAsFactors = FALSE
   )
+  letter.high$type <- factor(
+    letter.high$type,
+    levels = c("wasteland","woodland","upland","paddy")
+  )
+  letter.high <- letter.high[order(letter.high$type), ]
   letter.high$group <- "high"
   letters <- rbind(letter.low,letter.high)
   stat <- left_join(stat,letters,
                     by=c("type","group"))
+  stat$type <- factor(stat$type,
+                      levels=c("wasteland","woodland","upland","paddy"))
+  stat$group <- factor(stat$group,
+                       levels=c("low","high"))
   ##-----------------------------
   ## low vs high
   ##-----------------------------
@@ -97,8 +113,8 @@ plot_bar <- function(df, yvar, ylab){
         label = letter,
         group = group
       ),
+      position = position_dodge(width = 0.9),
       inherit.aes = FALSE,
-      position = position_dodge(0.9),
       size = 5
     )+
     geom_text(
@@ -113,7 +129,7 @@ plot_bar <- function(df, yvar, ylab){
     )+
     ## 红色参考线
     geom_hline(
-      yintercept = 55,
+      yintercept = 1.0,
       colour = "red",
       linewidth = 0.8,
       linetype = "dashed"
@@ -125,6 +141,10 @@ plot_bar <- function(df, yvar, ylab){
     theme(axis.text=element_text(size=14),
           axis.title=element_text(size=15,face="bold"),
           legend.position="top")
+  cat("\n=============================\n")
+  cat(yvar,"\n")
+  print(letters)
+  print(stat)
   return(p)
 }
 
@@ -151,11 +171,12 @@ p4
 
 
 # the figures of SQI and SMF
-df <- read.csv('SQI_SMF.csv',header = T,stringsAsFactors = FALSE, encoding='UTF-8')
+df <- read.csv('Supplementary SQI_SMF.csv',header = T,stringsAsFactors = FALSE, encoding='UTF-8')
 head(df)
 df$type = as.factor(df$type)
 df$type <- factor(df$type, levels = c('wasteland', 'woodland','upland','paddy'))
 df$group <- factor(df$group, levels = c('low', 'high'))
+# Turkey test
 plot_bar <- function(df, yvar, ylab){
   ##-----------------------------
   df$type <- factor(df$type,
@@ -175,9 +196,15 @@ plot_bar <- function(df, yvar, ylab){
   fit.low <- aov(as.formula(paste(yvar,"~type")),data=low)
   tukey.low <- HSD.test(fit.low,"type",group=TRUE)
   letter.low <- data.frame(
-    type=rownames(tukey.low$groups),
-    letter=tukey.low$groups$groups
+    type = rownames(tukey.low$groups),
+    letter = tukey.low$groups$groups,
+    stringsAsFactors = FALSE
   )
+  letter.low$type <- factor(
+    letter.low$type,
+    levels = c("wasteland","woodland","upland","paddy")
+  )
+  letter.low <- letter.low[order(letter.low$type), ]
   letter.low$group <- "low"
   ##-----------------------------
   ## high组 Tukey
@@ -186,13 +213,23 @@ plot_bar <- function(df, yvar, ylab){
   fit.high <- aov(as.formula(paste(yvar,"~type")),data=high)
   tukey.high <- HSD.test(fit.high,"type",group=TRUE)
   letter.high <- data.frame(
-    type=rownames(tukey.high$groups),
-    letter=tukey.high$groups$groups
+    type = rownames(tukey.high$groups),
+    letter = tukey.high$groups$groups,
+    stringsAsFactors = FALSE
   )
+  letter.high$type <- factor(
+    letter.high$type,
+    levels = c("wasteland","woodland","upland","paddy")
+  )
+  letter.high <- letter.high[order(letter.high$type), ]
   letter.high$group <- "high"
   letters <- rbind(letter.low,letter.high)
   stat <- left_join(stat,letters,
                     by=c("type","group"))
+  stat$type <- factor(stat$type,
+                      levels=c("wasteland","woodland","upland","paddy"))
+  stat$group <- factor(stat$group,
+                       levels=c("low","high"))
   ##-----------------------------
   ## low vs high
   ##-----------------------------
@@ -234,8 +271,8 @@ plot_bar <- function(df, yvar, ylab){
         label = letter,
         group = group
       ),
+      position = position_dodge(width = 0.9),
       inherit.aes = FALSE,
-      position = position_dodge(0.9),
       size = 5
     )+
     geom_text(
@@ -255,6 +292,10 @@ plot_bar <- function(df, yvar, ylab){
     theme(axis.text=element_text(size=14),
           axis.title=element_text(size=15,face="bold"),
           legend.position="top")
+  cat("\n=============================\n")
+  cat(yvar,"\n")
+  print(letters)
+  print(stat)
   return(p)
 }
 p5=plot_bar(df,
@@ -278,7 +319,7 @@ ggsave('fig 1.pdf', p7, width = 8, height = 10)
 
 
 # the result of Anova
-df <- read.csv("raw data.csv")
+df <- read.csv("Supplementary raw data.csv")
 vars <- c("lnClnN","lnClnP","length","angle")
 library(agricolae)
 
